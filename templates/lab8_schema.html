@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 8 - Database Schema Listing{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Payload 1 — List Tables:</strong><br>
+        <span class="payload">' UNION SELECT name,NULL,NULL FROM sqlite_master WHERE type='table'--</span><br><br>
+        <strong>💉 Payload 2 — Get Schema:</strong><br>
+        <span class="payload">' UNION SELECT sql,NULL,NULL FROM sqlite_master WHERE name='secret_users'--</span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> SQLite has <code>sqlite_master</code> (instead of MySQL's <code>information_schema</code>) 
+        which stores all table definitions. By querying this system table, an attacker can fully map the database structure 
+        — discovering hidden tables, columns, and even the complete CREATE TABLE statements.
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="search">Search Term:</label>
+                <input type="text" id="search" name="search" class="form-control" 
+                       value="{{ search }}" placeholder="Enter search term or SQL payload">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab8') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-top: 10px;">
+            <strong>SQL Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT id, name, description FROM products WHERE name LIKE '%{search}%'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT id, name, description FROM products WHERE name LIKE ?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(f"%{search}%",)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Query <code>sqlite_master</code> to discover all tables and schemas.<br>
+            <code>type='table'</code> filters for tables only.<br>
+            <code>sql</code> column contains the full CREATE TABLE statement!
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID / Table Name / Schema</th>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>
+                {% if product.id and product.id|string|length > 30 %}
+                    <span style="color: #8B0000; font-weight: bold; font-size: 0.85em;">{{ product.id }}</span>
+                {% else %}
+                    {{ product.id }}
+                {% endif %}
+            </td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> result(s).
+        {% if products|length > 5 %}
+            <strong style="color: #8B0000;">⚠️ SCHEMA EXPOSED! Full database structure revealed!</strong>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No results. Try searching or use the schema enumeration payloads.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>🗃️ Schema Enumeration Reference</h3>
+    </div>
+    <table class="data-table">
+        <tr>
+            <th>Database</th>
+            <th>List Tables</th>
+            <th>List Columns</th>
+        </tr>
+        <tr>
+            <td>SQLite</td>
+            <td><code>sqlite_master WHERE type='table'</code></td>
+            <td><code>pragma_table_info('table_name')</code></td>
+        </tr>
+        <tr>
+            <td>MySQL</td>
+            <td><code>information_schema.tables</code></td>
+            <td><code>information_schema.columns</code></td>
+        </tr>
+        <tr>
+            <td>PostgreSQL</td>
+            <td><code>information_schema.tables</code></td>
+            <td><code>information_schema.columns</code></td>
+        </tr>
+        <tr>
+            <td>Oracle</td>
+            <td><code>all_tables</code></td>
+            <td><code>all_tab_columns</code></td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

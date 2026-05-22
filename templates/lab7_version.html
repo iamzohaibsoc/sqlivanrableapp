@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 7 - Database Version Detection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payload:</strong><br>
+        <span class="payload">{{ payload }}</span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> Every database engine has a built-in function that reveals its version. 
+        Knowing the DB type helps tailor further attacks. In SQLite, use <code>sqlite_version()</code>. 
+        In MySQL/MSSQL, you would use <code>@@version</code>. This lab simulates the concept using SQLite's function.
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="search">Search Term:</label>
+                <input type="text" id="search" name="search" class="form-control" 
+                       value="{{ search }}" placeholder="Enter search term or SQL payload">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab7') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-top: 10px;">
+            <strong>SQL Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT id, name, description FROM products WHERE name LIKE '%{search}%'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT id, name, description FROM products WHERE name LIKE ?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(f"%{search}%",)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Inject <code>' UNION SELECT sqlite_version(),NULL,NULL--</code>.<br>
+            The version string (e.g., <code>3.45.1</code>) appears in the first column!<br><br>
+            <strong>Note:</strong> In real MySQL, use <code>@@version</code> or <code>version()</code>.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID / Version</th>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>
+                {% if '.' in product.id|string and product.id|string|length < 20 %}
+                    <span style="color: #8B0000; font-weight: bold;">{{ product.id }}</span>
+                {% else %}
+                    {{ product.id }}
+                {% endif %}
+            </td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> result(s).
+        {% if products|length > 5 %}
+            <strong style="color: #8B0000;">⚠️ VERSION LEAKED! Database version is exposed!</strong>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No results. Try searching or use the version payload.</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>🗃️ Database Version Functions Reference</h3>
+    </div>
+    <table class="data-table">
+        <tr>
+            <th>Database</th>
+            <th>Version Function</th>
+            <th>Example Output</th>
+        </tr>
+        <tr>
+            <td>SQLite</td>
+            <td><code>sqlite_version()</code></td>
+            <td>3.45.1</td>
+        </tr>
+        <tr>
+            <td>MySQL</td>
+            <td><code>@@version</code> or <code>version()</code></td>
+            <td>8.0.32</td>
+        </tr>
+        <tr>
+            <td>PostgreSQL</td>
+            <td><code>version()</code></td>
+            <td>PostgreSQL 14.2 ...</td>
+        </tr>
+        <tr>
+            <td>Microsoft SQL</td>
+            <td><code>@@version</code></td>
+            <td>Microsoft SQL Server 2019...</td>
+        </tr>
+        <tr>
+            <td>Oracle</td>
+            <td><code>* FROM v$version</code></td>
+            <td>Oracle Database 19c...</td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

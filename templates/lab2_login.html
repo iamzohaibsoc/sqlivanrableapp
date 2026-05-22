@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 2 - Login Bypass{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payload:</strong><br>
+        <span class="payload">{{ payload }}</span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> The login form passes username and password into a SQL query. 
+        By injecting SQL into the username field, you can comment out the password check entirely 
+        and log in as any user, including 'administrator'.
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔐 Login Form</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" class="form-control" 
+                       value="{{ username }}" placeholder="Enter username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" id="password" name="password" class="form-control" 
+                       placeholder="Enter password">
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="{{ url_for('lab2') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if result %}
+            {% if result.success %}
+            <div class="result-box" style="margin-top: 15px;">
+                <h4 style="color: #2e7d32;">✅ Login Successful!</h4>
+                <p><strong>Welcome, {{ result.username }}!</strong></p>
+                <p>Role: <span style="color: #8B0000; font-weight: bold;">{{ result.role }}</span></p>
+            </div>
+            {% else %}
+            <div class="result-box danger" style="margin-top: 15px;">
+                <h4 style="color: #c62828;">❌ Login Failed</h4>
+                <p>Invalid username or password.</p>
+                {% if result.error %}
+                <p style="font-size: 0.85em; color: #666;">Error: {{ result.error }}</p>
+                {% endif %}
+            </div>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT * FROM users WHERE username='{username}' AND password='{password}'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT * FROM users WHERE username=? AND password=?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(username, password)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Input <code>administrator'--</code> as username. The query becomes:<br>
+            <code>WHERE username='administrator'--' AND password='...'</code><br>
+            The <code>--</code> comments out the password check, so ANY password works!
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>👥 Registered Users (For Reference)</h3>
+    </div>
+    <table class="data-table">
+        <tr>
+            <th>Username</th>
+            <th>Role</th>
+        </tr>
+        <tr><td>administrator</td><td><span style="color: #8B0000; font-weight: bold;">admin</span></td></tr>
+        <tr><td>john_doe</td><td>user</td></tr>
+        <tr><td>jane_smith</td><td>user</td></tr>
+        <tr><td>guest</td><td>guest</td></tr>
+    </table>
+    <p style="margin-top: 10px; font-size: 0.9em; color: #666;">
+        <em>Note: Passwords are hidden. Try logging in as 'administrator' without knowing the password!</em>
+    </p>
+</div>
+{% endblock %}

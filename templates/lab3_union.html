@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 3 - UNION Column Count{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payloads:</strong><br>
+        <span class="payload">' ORDER BY 1--</span> (increment until error)<br>
+        <span class="payload">' UNION SELECT NULL--</span> (1 column)<br>
+        <span class="payload">' UNION SELECT NULL,NULL--</span> (2 columns)<br>
+        <span class="payload">' UNION SELECT NULL,NULL,NULL--</span> (3 columns ✓)
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> Before a UNION attack, you must know how many columns the original query returns. 
+        You inject ORDER BY or UNION SELECT NULL statements, incrementing until no error occurs — revealing the column count.
+        This query returns <strong>3 columns</strong>: id, name, description.
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="search">Search Term:</label>
+                <input type="text" id="search" name="search" class="form-control" 
+                       value="{{ search }}" placeholder="Enter search term or SQL payload">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab3') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-top: 10px;">
+            <strong>SQL Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT id, name, description FROM products WHERE name LIKE '%{search}%'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT id, name, description FROM products WHERE name LIKE ?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(f"%{search}%",)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Try <code>' ORDER BY 4--</code> → error (only 3 columns).<br>
+            Then <code>' UNION SELECT NULL,NULL,NULL--</code> → success! Confirms 3 columns.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> result(s).
+    </div>
+    {% else %}
+    <p>No results. Try searching or use a UNION payload to test column count.</p>
+    {% endif %}
+</div>
+{% endblock %}

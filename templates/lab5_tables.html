@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 5 - Cross-Table Data Retrieval{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payload:</strong><br>
+        <span class="payload">{{ payload }}</span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> With a working UNION and a text column identified, you can now pull data from 
+        entirely different tables in the database — such as a 'secret_users' table containing usernames and passwords. 
+        The query returns 3 columns (id, name, description), so we match that with (username, password, NULL).
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="search">Search Term:</label>
+                <input type="text" id="search" name="search" class="form-control" 
+                       value="{{ search }}" placeholder="Enter search term or SQL payload">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab5') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-top: 10px;">
+            <strong>SQL Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT id, name, description FROM products WHERE name LIKE '%{search}%'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT id, name, description FROM products WHERE name LIKE ?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(f"%{search}%",)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Inject <code>' UNION SELECT username,password,NULL FROM secret_users--</code>.<br>
+            The UNION combines product results with secret user credentials! Column types match: 
+            username→name (TEXT), password→description (TEXT), NULL→id placeholder.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID / Username</th>
+            <th>Name / Password</th>
+            <th>Description</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> result(s).
+        {% if products|length > 8 %}
+            <strong style="color: #8B0000;">⚠️ DATA BREACH! Secret user credentials leaked!</strong>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No results. Try searching or use the UNION payload to dump secret_users.</p>
+    {% endif %}
+</div>
+{% endblock %}

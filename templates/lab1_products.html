@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 1 - Hidden Data Bypass{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payload:</strong><br>
+        <span class="payload">{{ payload }}</span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> The application filters products by category using a SQL WHERE clause. 
+        By injecting into the category parameter, you can bypass the <code>released=1</code> filter 
+        and retrieve items that are normally hidden (e.g., unreleased products).
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products by Category</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="category">Category:</label>
+                <input type="text" id="category" name="category" class="form-control" 
+                       value="{{ category }}" placeholder="Enter category (e.g., Electronics, Furniture, Software)">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab1') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT * FROM products WHERE category='{category}' AND released=1"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT * FROM products WHERE category=? AND released=1"</span><br>
+cursor.execute(query, <span class="safe-highlight">(category,)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Input <code>' OR 1=1--</code> changes the query to 
+            <code>WHERE category='' OR 1=1--' AND released=1</code>. The <code>--</code> comments out 
+            the rest, and <code>OR 1=1</code> is always true, returning ALL products including hidden ones.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Released</th>
+            <th>Price</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+            <td>{{ product.category }}</td>
+            <td>
+                {% if product.released == 1 %}
+                    <span style="color: green;">✓ Yes</span>
+                {% else %}
+                    <span style="color: red; font-weight: bold;">✗ HIDDEN</span>
+                {% endif %}
+            </td>
+            <td>${{ product.price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> product(s).
+        {% if products|length > 5 %}
+            <strong>⚠️ Attack Successful!</strong> Hidden products are visible!
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No products found. Try a different category or use the attack payload.</p>
+    {% endif %}
+</div>
+{% endblock %}

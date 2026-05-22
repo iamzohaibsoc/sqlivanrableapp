@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 6 - Multiple Values in Single Column{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payload:</strong><br>
+        <span class="payload">{{ payload }}</span>
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> When only one column is usable for text output, you can concatenate multiple fields 
+        into that single column using database-specific syntax. In SQLite, use <code>||</code> (double pipe) to 
+        concatenate strings. This query only exposes ONE text column (name), so we must combine username and password.
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="search">Search Term:</label>
+                <input type="text" id="search" name="search" class="form-control" 
+                       value="{{ search }}" placeholder="Enter search term or SQL payload">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab6') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-top: 10px;">
+            <strong>SQL Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT id, name, price FROM products WHERE name LIKE '%{search}%'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT id, name, price FROM products WHERE name LIKE ?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(f"%{search}%",)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> Only column 2 (name) is text. Use SQLite concatenation:<br>
+            <code>' UNION SELECT NULL, username||':'||password, NULL FROM secret_users--</code><br>
+            Result: <code>admin:admin_pass_2024</code> — both values in one column!
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID</th>
+            <th>Name (or Concatenated Data)</th>
+            <th>Price</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.id }}</td>
+            <td>
+                {% if ':' in product.name %}
+                    <span style="color: #8B0000; font-weight: bold;">{{ product.name }}</span>
+                {% else %}
+                    {{ product.name }}
+                {% endif %}
+            </td>
+            <td>${{ product.price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> result(s).
+        {% if products|length > 8 %}
+            <strong style="color: #8B0000;">⚠️ CREDENTIALS EXPOSED! username:password format detected!</strong>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>No results. Try searching or use the concatenation payload.</p>
+    {% endif %}
+</div>
+{% endblock %}

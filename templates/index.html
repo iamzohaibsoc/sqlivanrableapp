@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Home - SQL Injection Lab{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Welcome to the SQL Injection Laboratory</h2>
+    </div>
+    <p style="font-size: 1.1em; margin-bottom: 20px;">
+        This application is <strong> vulnerable</strong> to SQL Injection attacks. 
+        It is designed for educational purposes to help US understand how SQLi vulnerabilities work 
+        and how to defend against them.
+    </p>
+
+    
+
+    <h3 style="color: #8B0000; margin-top: 25px; margin-bottom: 15px;">📋 Assignment Overview</h3>
+    <p>
+        This lab covers all <strong>8 SQL Injection vulnerability types</strong> from the PortSwigger Web Academy. 
+    </p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>🔬 Select a Lab to Begin</h2>
+    </div>
+    <div class="lab-grid">
+        <a href="{{ url_for('lab1') }}" class="lab-card">
+            <div class="lab-num">1</div>
+            <div class="lab-title">Hidden Data Bypass</div>
+            <div class="lab-desc">Bypass WHERE clause filters to retrieve unreleased products</div>
+        </a>
+        <a href="{{ url_for('lab2') }}" class="lab-card">
+            <div class="lab-num">2</div>
+            <div class="lab-title">Login Bypass</div>
+            <div class="lab-desc">Comment out password check and login as administrator</div>
+        </a>
+        <a href="{{ url_for('lab3') }}" class="lab-card">
+            <div class="lab-num">3</div>
+            <div class="lab-title">UNION Column Count</div>
+            <div class="lab-desc">Determine the number of columns using ORDER BY or UNION SELECT</div>
+        </a>
+        <a href="{{ url_for('lab4') }}" class="lab-card">
+            <div class="lab-num">4</div>
+            <div class="lab-title">Text Column Detection</div>
+            <div class="lab-desc">Identify which columns can hold string data for extraction</div>
+        </a>
+        <a href="{{ url_for('lab5') }}" class="lab-card">
+            <div class="lab-num">5</div>
+            <div class="lab-title">Cross-Table Dump</div>
+            <div class="lab-desc">Retrieve usernames and passwords from other tables</div>
+        </a>
+        <a href="{{ url_for('lab6') }}" class="lab-card">
+            <div class="lab-num">6</div>
+            <div class="lab-title">Single Column Concat</div>
+            <div class="lab-desc">Combine multiple fields into one column using || operator</div>
+        </a>
+        <a href="{{ url_for('lab7') }}" class="lab-card">
+            <div class="lab-num">7</div>
+            <div class="lab-title">DB Version Detection</div>
+            <div class="lab-desc">Extract sqlite_version() to identify the database engine</div>
+        </a>
+        <a href="{{ url_for('lab8') }}" class="lab-card">
+            <div class="lab-num">8</div>
+            <div class="lab-title">Schema Enumeration</div>
+            <div class="lab-desc">List all tables and columns using sqlite_master</div>
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>🛡️ Safe Parameterized Demo</h2>
+    </div>
+    <p>
+        Compare the vulnerable labs with a <strong>secure implementation</strong> using parameterized queries. 
+        See how the same functionality can be built safely.
+    </p>
+    <div style="text-align: center; margin-top: 15px;">
+        <a href="{{ url_for('safe_demo') }}" class="btn btn-primary">View Safe Demo</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>📊 Database Schema</h2>
+    </div>
+    <table class="data-table">
+        <tr>
+            <th>Table</th>
+            <th>Columns</th>
+            <th>Purpose</th>
+        </tr>
+        <tr>
+            <td><code>products</code></td>
+            <td>id, name, description, category, released, price</td>
+            <td>Product catalog with hidden/unreleased items</td>
+        </tr>
+        <tr>
+            <td><code>users</code></td>
+            <td>id, username, password, role</td>
+            <td>Login credentials (Lab 2 target)</td>
+        </tr>
+        <tr>
+            <td><code>secret_users</code></td>
+            <td>id, username, password</td>
+            <td>Hidden credentials (Labs 5 & 6 target)</td>
+        </tr>
+        <tr>
+            <td><code>sqlite_master</code></td>
+            <td>type, name, tbl_name, rootpage, sql</td>
+            <td>SQLite system table (Lab 8 target)</td>
+        </tr>
+    </table>
+</div>
+{% endblock %}

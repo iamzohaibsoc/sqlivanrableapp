@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Lab 4 - Text Column Detection{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Lab {{ lab_num }}: {{ lab_title }} <span class="badge">VULNERABLE</span></h2>
+    </div>
+    <p>{{ description }}</p>
+
+    <div class="payload-box">
+        <strong>💉 Example Payloads:</strong><br>
+        <span class="payload">' UNION SELECT 'a',NULL,NULL--</span> (test column 1)<br>
+        <span class="payload">' UNION SELECT NULL,'a',NULL--</span> (test column 2)<br>
+        <span class="payload">' UNION SELECT NULL,NULL,'a'--</span> (test column 3)
+    </div>
+
+    <div class="alert alert-info">
+        <strong>Concept:</strong> Once you know the column count (3), you need to identify which column holds 
+        string (text) data so you can extract meaningful information. You inject test strings like 'a' 
+        into each NULL position until one appears in the response.<br><br>
+        <strong>Column Types:</strong> id (INTEGER), name (TEXT), price (INTEGER) — Only column 2 (name) accepts text!
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="search">Search Term:</label>
+                <input type="text" id="search" name="search" class="form-control" 
+                       value="{{ search }}" placeholder="Enter search term or SQL payload">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('lab4') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-danger" style="margin-top: 10px;">
+            <strong>SQL Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Vulnerability Explanation</h3>
+        </div>
+        <p><strong>Vulnerable Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="vuln-highlight">f"SELECT id, name, price FROM products WHERE name LIKE '%{search}%'"</span><br>
+cursor.execute(query)
+        </div>
+        <p><strong>Safe Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT id, name, price FROM products WHERE name LIKE ?"</span><br>
+cursor.execute(query, <span class="safe-highlight">(f"%{search}%",)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Attack:</strong> The query returns <code>id (int), name (text), price (int)</code>.<br>
+            Try <code>' UNION SELECT 'a',NULL,NULL--</code> → type mismatch error (id is int).<br>
+            Try <code>' UNION SELECT NULL,'a',NULL--</code> → success! Column 2 is text.
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Price</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>${{ product.price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> result(s).
+    </div>
+    {% else %}
+    <p>No results. Try searching or use a UNION payload to test text columns.</p>
+    {% endif %}
+</div>
+{% endblock %}

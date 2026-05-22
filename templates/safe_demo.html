@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Safe Demo - Parameterized Queries{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>✅ Safe Parameterized Query Demo <span class="badge" style="background: #28a745;">SECURE</span></h2>
+    </div>
+    <p>
+        This page demonstrates the <strong>same functionality as Lab 1</strong> but implemented securely 
+        using <strong>parameterized queries</strong>. Try the same attack payloads — they will NOT work!
+    </p>
+
+    <div class="alert alert-success">
+        <strong>🛡️ This route is IMMUNE to SQL Injection!</strong> All user input is treated as data, not executable code.
+    </div>
+</div>
+
+<div class="two-col">
+    <div class="card">
+        <div class="card-header">
+            <h3>🔍 Search Products by Category (SECURE)</h3>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label for="category">Category:</label>
+                <input type="text" id="category" name="category" class="form-control" 
+                       value="{{ category }}" placeholder="Enter category">
+            </div>
+            <button type="submit" class="btn btn-primary">Search</button>
+            <a href="{{ url_for('safe_demo') }}" class="btn btn-secondary">Reset</a>
+        </form>
+
+        {% if query %}
+        <div class="query-box">
+            <span class="label">[SQL QUERY EXECUTED]</span><br>
+            {{ query }}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>📖 Secure Implementation</h3>
+        </div>
+        <p><strong>Secure Code:</strong></p>
+        <div class="code-snippet">
+query = <span class="safe-highlight">"SELECT * FROM products WHERE category=? AND released=1"</span><br>
+cursor.execute(query, <span class="safe-highlight">(category,)</span>)
+        </div>
+        <p style="margin-top: 10px;">
+            <strong>Why it's safe:</strong> The <code>?</code> placeholder ensures user input is treated as 
+            <strong>data only</strong>, never as executable SQL. Even if you input <code>' OR 1=1--</code>, 
+            SQLite treats it as a literal string value for the category column.
+        </p>
+        <div class="alert alert-info" style="margin-top: 10px;">
+            <strong>Try it:</strong> Enter <code>' OR 1=1--</code> — it will search for a category 
+            literally named <code>' OR 1=1--</code> and return nothing (unless such a category exists).
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>📋 Results</h3>
+    </div>
+    {% if products %}
+    <table class="data-table">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Released</th>
+            <th>Price</th>
+        </tr>
+        {% for product in products %}
+        <tr>
+            <td>{{ product.id }}</td>
+            <td>{{ product.name }}</td>
+            <td>{{ product.description }}</td>
+            <td>{{ product.category }}</td>
+            <td>
+                {% if product.released == 1 %}
+                    <span style="color: green;">✓ Yes</span>
+                {% else %}
+                    <span style="color: red;">✗ No</span>
+                {% endif %}
+            </td>
+            <td>${{ product.price }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <div class="alert alert-success">
+        Found <strong>{{ products|length }}</strong> product(s).
+    </div>
+    {% else %}
+    <p>No products found. Try "Electronics" or "Furniture".</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>🛡️ SQL Injection Defense Strategies</h3>
+    </div>
+    <table class="data-table">
+        <tr>
+            <th>Defense</th>
+            <th>Description</th>
+            <th>Effectiveness</th>
+        </tr>
+        <tr>
+            <td><strong>Parameterized Queries</strong></td>
+            <td>Use placeholders (? or %s) — input treated as data only</td>
+            <td><span style="color: green; font-weight: bold;">★★★★★</span></td>
+        </tr>
+        <tr>
+            <td><strong>ORM (SQLAlchemy)</strong></td>
+            <td>Object-Relational Mapping handles query construction safely</td>
+            <td><span style="color: green; font-weight: bold;">★★★★★</span></td>
+        </tr>
+        <tr>
+            <td><strong>Input Validation</strong></td>
+            <td>Whitelist allowed characters, reject suspicious patterns</td>
+            <td><span style="color: orange; font-weight: bold;">★★★☆☆</span></td>
+        </tr>
+        <tr>
+            <td><strong>WAF (Web App Firewall)</strong></td>
+            <td>Filter malicious requests at the network level</td>
+            <td><span style="color: orange; font-weight: bold;">★★★☆☆</span></td>
+        </tr>
+        <tr>
+            <td><strong>Least Privilege</strong></td>
+            <td>DB user should have minimal required permissions</td>
+            <td><span style="color: orange; font-weight: bold;">★★★★☆</span></td>
+        </tr>
+        <tr>
+            <td><strong>Stored Procedures</strong></td>
+            <td>Pre-defined DB procedures with parameterized inputs</td>
+            <td><span style="color: green; font-weight: bold;">★★★★☆</span></td>
+        </tr>
+    </table>
+</div>
+{% endblock %}
